@@ -4,8 +4,6 @@ import os
 base1 = input("첫 번째 디렉토리 입력: ")
 base2 = input("두 번째 디렉토리 입력: ")
 
-
-# [추가] 파일 내용을 비교하기 위한 초간단 함수
 def get_hash(path):
     hasher = hashlib.md5()
     try:
