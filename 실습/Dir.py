@@ -1,74 +1,67 @@
-import hashlib
 import os
 
-base1 = input("첫 번째 디렉토리 입력: ")
-base2 = input("두 번째 디렉토리 입력: ")
-
-def get_hash(path):
-    hasher = hashlib.md5()
+def get_files(d):
+    res = {}
     try:
-        with open(path, "rb") as f:
-            while chunk := f.read(8192):
-                hasher.update(chunk)
-        return hasher.hexdigest()
-    except:
+        with os.scandir(d) as entries:
+            for e in entries:
+                if e.is_file():
+                    # os.stat()을 활용해 파일 크기 구하기
+                    sz = os.stat(e.path).st_size
+                    # 파일 내용 읽기
+                    with open(e.path, 'rb') as f:
+                        content = f.read()
+                    res[e.name] = (sz, content)
+    except FileNotFoundError:
+        print(f"오류: '{d}' 디렉토리를 찾을 수 없습니다.")
         return None
+    return res
+
+def compare_dirs():
+    d1 = input("첫 번째 디렉토리 이름: ").strip()
+    d2 = input("두 번째 디렉토리 이름: ").strip()
+    
+    # 각 디렉토리의 파일 정보 가져오기
+    i1 = get_files(d1)
+    i2 = get_files(d2)
+    
+    if i1 is None or i2 is None:
+        return
+
+    # 파일명 집합
+    f1, f2 = set(i1.keys()), set(i2.keys())
+    
+    print("\n--- 비교 결과 ---")
+    
+    # 1. 파일 개수 비교
+    if len(f1) != len(f2):
+        print(f"파일 개수: 다름 (파일 개수가 일치하지 않음: {len(f1)}개 vs {len(f2)}개)")
+    else:
+        print(f"파일 개수: 같음")
+
+    # 2. 파일명 비교
+    for name in f1:
+        if name in f2:
+            print(f"두 폴더 모두 이름이 {name}인 파일이 있습니다.")
+
+    s1 = [val[0] for val in i1.values()]
+    s2 = [val[0] for val in i2.values()]
+
+    # 3. 각 파일의 크기 비교
+    for s in s1:
+        if s in s2:
+            print(f"두 폴더에 크기가 {s}인 파일이 있습니다.")
+            s2.remove(s)
+
+    c1 = [val[1] for val in i1.values()]
+    c2 = [val[1] for val in i2.values()]
+    # 4. 각 파일의 내용 비교
+    for c in c1:
+        if c in c2:
+            print(f"두 폴더에 내용 {c}인 파일이 있습니다.")
+            c2.remove(c)
 
 
-def listAll(path, base_path, result_dict):
-    dirfiles = os.listdir(path)
-    subdirs = [path + "/" + x for x in dirfiles if os.path.isdir(path + "/" + x)]
-    print(path)
+if __name__ == "__main__":
+    compare_dirs()
 
-    with os.scandir(path) as entries:
-        D = {}
-        for entry in entries:
-            print(f"이름: {entry.name}")
-            if entry.is_file():
-                file_size_bytes = entry.stat().st_size
-                print(f"크기: {file_size_bytes}")
-
-                file_hash = get_hash(entry.path)
-                D[entry.name] = (file_size_bytes, file_hash)
-
-        for name, info in D.items():
-            rel_path = os.path.relpath(path + "/" + name, base_path)
-            result_dict[rel_path] = info
-
-    for subdir in subdirs:
-        listAll(subdir, base_path, result_dict)
-
-    print(D)
-
-
-dir1_result = {}
-dir2_result = {}
-
-print(f"\n=== {base1} 탐색 시작 ===")
-listAll(base1, base1, dir1_result)
-
-print(f"\n=== {base2} 탐색 시작 ===")
-listAll(base2, base2, dir2_result)
-
-
-if len(dir1_result) != len(dir2_result):
-    print("두 디렉토리의 파일 개수가 다릅니다!")
-    print(f"   - {base1}: {len(dir1_result)}개 / {base2}: {len(dir2_result)}개")
-else:
-    print(f"파일 개수 동일 ({len(dir1_result)}개)")
-
-all_match = True
-for rel_path, info1 in dir1_result.items():
-    if rel_path not in dir2_result:
-        print(f"[{rel_path}] 파일이 한쪽에만 존재합니다.")
-        all_match = False
-        continue
-
-    info2 = dir2_result[rel_path]
-
-    if info1[0] != info2[0] or info1[1] != info2[1]:
-        print(f"[{rel_path}] 파일의 크기나 내용이 다릅니다.")
-        all_match = False
-
-if all_match:
-    print("모든 파일의 이름, 크기, 내용이 일치합니다!")
