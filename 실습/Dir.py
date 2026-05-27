@@ -61,7 +61,6 @@ def compare_dirs():
             print(f"두 폴더에 내용 {c}인 파일이 있습니다.")
             c2.remove(c)
 
-
 if __name__ == "__main__":
     compare_dirs()
 
